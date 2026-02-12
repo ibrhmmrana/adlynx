@@ -1,0 +1,55 @@
+AdLynx: BRIEF FOR A PERFORMANCE MEDIA PRODUCT BETA
+January 2026
+Product architecture: The hybrid intelligence advertising engine
+1. Strategic context and product philosophy
+The current digital advertising landscape demands slow, human generated authentic connection and the scalable efficiency of technology and paid social channels. Our product architecture is designed to synthesise emotive, human-generated content (typically hard to scale organically) with systems and paid media performance through a "hybrid intelligence" model.
+We are building a unified platform that merges two distinct supply chains: a "Creator Collective" for authentic content and an AI ad agent (internally referenced as "[ TBC ]") for rigorous optimisation. The core user promise is to facilitate a journey from "URL to ads in 2 minutes". This approach moves beyond simple ad buying to industrialise the creation of high-performance creative, ensuring that emotive storytelling is optimised by technology for maximum return. The “Return On Ad Spend” (ROAS) metric is the guiding performance metric that relates the cost of the creation and distribution of content, to the deliverable of conversion (sign up, quote, check out, etc).
+2. The pain points of setting a performance media operation together
+There are only 3 million non-US businesses that make use of Adwords, TikTok Ads or Meta ads. There are many hurdles to overcome when executing a paid media campaign. The typical questions, hesitation, frictions and uncertainties sound like: 
+What keywords or key phrases should I target?
+What is the difference between broad match versus exact match?
+How much budget should I allocate to start, and how do I know if I'm spending too much?
+How do I track conversion to know exactly which ad drove a sale?
+Is my performance better than the industry average?
+Who can write my ads if I don't have a professional copywriter?
+How do I set up a bidding strategy without losing money?
+How do I navigate complex dashboards like Meta Business Manager without technical training?
+How do I produce enough fresh creative variations to stop ad fatigue?
+How do I adapt one video to fit the different algorithms and formats of TikTok, Google, and Facebook?
+Where do I get professional images or videos if I don't have a design team?
+How do I run A/B tests to see which headline works best without setting them up manually?
+How do I ensure the ads are brand-safe and don't look like spam?
+How do I identify gaps in my competitors' strategies?
+Most people would prefer to have a reputable, experienced person to do this for them.
+3. The onboarding experience as product demonstration
+The onboarding process is engineered to function as a product demonstration rather than a purely administrative task. Instead of presenting users with complex dashboards or a time intensive onboarding, the journey begins with a single, low-friction input: the user's website URL.
+Upon entry, the system initiates a parallel processing sequence. As the user connects via Google to authenticate their identity, the AI workflow analyses the provided URL to extract brand data. This analysis allows the system to automatically prepopulate the company account profile by scraping the website, social media links, and Google Business Profile (GBP) data. By building the account foundation before the user manually enters data, we reduce friction and immediately demonstrate the platform's intelligent capabilities.
+The output, after registration is a set of hypothetical ads, tagged by their intent (“product promotion”, “special offer”, “USP”, etc) and mocked up in the appropriate media channel (IG, TT, Goog etc) with proposed images and copy.
+The generation of the ads is done by getting OpenAI to draft compelling copy for each, and making use of collateral that can be sourced on the brand’s social media or website. The demo of this output, illustrates that the work of the creation of ad sets can be easily done. The next step is to activate the client, and get them to commit to a meeting, budget and timeline. 
+For the initial scope, the workflows of generating and taking the ads live are not required. The onboarding and set up of their environment with their contact and company info, their brand bible, and a high level of their campaigns is sufficient. Once we’ve run 50 manual campaigns, we’ll codify the balance. A logged in environment with an ability to commit to spend is the “victory outcome” of this beta product.
+4. The “Digital Asset Library”
+The "asset library" serves as the central repository for the creative engine. In addition to manual uploads, this library is also populated through scraped content, and two proprietary generation streams.
+The Creator Collective (human): This integration provides access to a network of vetted creators. This stream supplies authentic user-generated content (UGC), which serves as the primary source for building trust and emotional connection.
+AI content studio (machine): To achieve scale, we utilise an internal AI content engine (utilising Google’s "Nano banana"). This layer generates supplementary assets and variations, filling creative gaps where specific formats are needed quickly.
+These assets are organised into "campaign kits" to ensure consistency across all creative outputs. A single “brand kit” keeps a record of the colour palette, logos, and other CI guided material.
+5. Product architecture and menu elements
+Ads
+“URL to ad” engine
+Connect with Meta, TikTok and Google
+Live campaign cards with basic reporting (Spend, views, clicks, sales, ROAS)
+Assets
+Brand kits
+Creator Collective library
+Images and video uploads
+Ai content studio (Nano banana)
+Analysis
+Keyword analysis (Ahrefs API)
+Competitor analysis (Similar process to GBP + antistatic) 
+6. The "URL to ad" engine and execution
+Once the assets are secured, the user engages with the core utility: the "magic wand" feature. This engine automates the transition from raw assets to mock up campaigns by constructing strategic ad sets for Instagram, Google and TikTok.
+Rather than creating singular ads, the system generates a sequence of ad types tailored to the marketing funnel, such as direct promotions, unique selling proposition (USP) messaging, and gifting offers. Simultaneously, the engine manages channel selection, determining the optimal mix across Google Ads, Meta, and TikTok based on the campaign goals. This "URL to ad" architecture abstracts away the technical complexity of platform-specific requirements.
+7. Intelligence, analysis, and the product menu
+The management layer is designed to move beyond vanity metrics towards actionable business insights. We replace complex campaign hierarchies with a simplified "product menu," allowing users to view and toggle campaigns based on the specific products being advertised.
+Underpinning this interface is a suite of analysis tools designed for continuous optimisation:
+Strategic analysis: The system integrates with third-party APIs (such as Ahrefs) to perform keyword analysis and conducts competitor analysis to benchmark performance against the market.
+Real-time optimisation: An MCP server orchestrates campaign execution, monitoring performance data in real-time. It automatically shifts budget allocations to the highest-performing creative variations—whether human or AI-generated—to maximise return on ad spend.
