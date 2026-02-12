@@ -1,0 +1,8 @@
+{
+  "functions": {
+    "app/api/scan/brand/route.ts": {
+      "maxDuration": 60,
+      "memory": 3008
+    }
+  }
+}
