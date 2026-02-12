@@ -10,6 +10,8 @@ import {
 } from "@/lib/brand/aiBrandAnalysis";
 import type { BrandProfile } from "@/lib/brand/types";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 export async function POST(request: Request) {
@@ -99,10 +101,6 @@ export async function POST(request: Request) {
       brandProfile,
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    const name = err instanceof Error ? err.name : "Error";
-    console.error("[scan/brand]", name, message, err);
-
     const isTimeout =
       err instanceof Error &&
       (err.name === "TimeoutError" || /timeout/i.test(err.message));
@@ -122,7 +120,6 @@ export async function POST(request: Request) {
         success: false,
         error:
           "Failed to scan website. The site may be blocking automated access or is unavailable.",
-        code: "SCAN_FAILED",
       },
       { status: 500 }
     );

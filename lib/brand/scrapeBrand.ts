@@ -1,5 +1,5 @@
-import { chromium as pwChromium } from "playwright";
-import type { Browser, Page } from "playwright";
+import { chromium as pwChromium } from "playwright-core";
+import type { Browser, Page } from "playwright-core";
 import chromium from "@sparticuz/chromium";
 import type { PageContent, AggregatedScrape } from "./types";
 
@@ -17,18 +17,26 @@ const KEY_PAGE_PATTERNS = [
 export async function launchBrowser(): Promise<Browser> {
   const isServerless =
     !!process.env.AWS_LAMBDA_FUNCTION_NAME || !!process.env.VERCEL;
-  const executablePath = isServerless ? await chromium.executablePath() : undefined;
+  const localPath =
+    process.env.CHROME_PATH || process.env.CHROME_EXECUTABLE_PATH;
+  const executablePath = isServerless
+    ? await chromium.executablePath()
+    : (localPath || undefined);
 
   return pwChromium.launch({
     headless: true,
     args: [
       ...(isServerless ? chromium.args : []),
-      "--disable-blink-features=AutomationControlled",
       "--no-sandbox",
       "--disable-setuid-sandbox",
+      "--disable-blink-features=AutomationControlled",
+      "--disable-dev-shm-usage",
+      "--single-process",
+      "--no-zygote",
+      "--disable-gpu",
     ],
     executablePath,
-    timeout: NAV_TIMEOUT_MS,
+    timeout: 60000,
   });
 }
 
