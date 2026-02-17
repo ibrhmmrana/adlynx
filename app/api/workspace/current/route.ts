@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { getOrSetGuestIdCookie } from "@/lib/supabase/cookies";
 
+type WorkspaceSummary = { id: string; business_name: string | null; domain: string | null; logo_external_url: string | null; logo_storage_path: string | null };
+
 export async function GET(request: Request) {
   const { guestId, setCookieHeader } = getOrSetGuestIdCookie(request);
   const { searchParams } = new URL(request.url);
@@ -18,7 +20,8 @@ export async function GET(request: Request) {
       .maybeSingle();
     if (error) return NextResponse.json({ error: "Failed to load workspace" }, { status: 500 });
     if (!workspace) return NextResponse.json({ workspaceId: null, workspace: null });
-    const res = NextResponse.json({ workspaceId: workspace.id, workspace });
+    const w = workspace as WorkspaceSummary;
+    const res = NextResponse.json({ workspaceId: w.id, workspace: w });
     if (setCookieHeader) res.headers.set("Set-Cookie", setCookieHeader);
     return res;
   }
@@ -32,9 +35,10 @@ export async function GET(request: Request) {
     .maybeSingle();
 
   if (error) return NextResponse.json({ error: "Failed to load workspace" }, { status: 500 });
+  const w = workspace as WorkspaceSummary | null;
   const res = NextResponse.json({
-    workspaceId: workspace?.id ?? null,
-    workspace: workspace ?? null,
+    workspaceId: w?.id ?? null,
+    workspace: w ?? null,
   });
   if (setCookieHeader) res.headers.set("Set-Cookie", setCookieHeader);
   return res;
