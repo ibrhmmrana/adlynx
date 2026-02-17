@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { getGuestIdFromRequest } from "@/lib/supabase/cookies";
+import type { Workspace } from "@/lib/db/types";
 
 export async function GET(
   _request: Request,
@@ -48,14 +49,14 @@ export async function PATCH(
 
   if (!existing) return NextResponse.json({ error: "Workspace not found" }, { status: 404 });
 
-  const update: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  const update: Partial<Workspace> = { updated_at: new Date().toISOString() };
   if (typeof body.businessName === "string") update.business_name = body.businessName;
-  if (body.tagline !== undefined) update.tagline = body.tagline;
-  if (body.mission !== undefined) update.mission = body.mission;
-  if (body.sellingType !== undefined) update.selling_type = body.sellingType;
-  if (body.colors !== undefined) update.colors = body.colors;
-  if (body.socialLinks !== undefined) update.social_links = body.socialLinks;
-  if (body.logoUrl !== undefined) update.logo_external_url = body.logoUrl;
+  if (body.tagline !== undefined) update.tagline = body.tagline as string | null;
+  if (body.mission !== undefined) update.mission = body.mission as string | null;
+  if (body.sellingType !== undefined) update.selling_type = body.sellingType as string | null;
+  if (body.colors !== undefined) update.colors = body.colors as Workspace["colors"];
+  if (body.socialLinks !== undefined) update.social_links = body.socialLinks as Workspace["social_links"];
+  if (body.logoUrl !== undefined) update.logo_external_url = body.logoUrl as string | null;
 
   const { data: workspace, error } = await supabase
     .from("workspaces")
