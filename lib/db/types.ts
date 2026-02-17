@@ -37,7 +37,7 @@ export interface Asset {
   workspace_id: string;
   product_id: string | null;
   created_at: string;
-  kind: "logo" | "product_image" | "scraped_image" | "creative";
+  kind: string;
   external_url: string | null;
   storage_path: string | null;
   meta: Record<string, unknown> | null;

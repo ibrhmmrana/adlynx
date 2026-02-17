@@ -1,4 +1,7 @@
--- Workspaces (brand profiles) scoped by guest_id
+-- AdLynx workspace, products, assets, creatives
+-- All writes/reads go through server routes with service role; RLS is strict.
+
+-- A) workspaces
 CREATE TABLE IF NOT EXISTS workspaces (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   created_at timestamptz NOT NULL DEFAULT now(),
@@ -19,7 +22,7 @@ CREATE TABLE IF NOT EXISTS workspaces (
 CREATE INDEX IF NOT EXISTS idx_workspaces_guest_id ON workspaces (guest_id);
 CREATE INDEX IF NOT EXISTS idx_workspaces_domain ON workspaces (domain);
 
--- Products per workspace
+-- B) products
 CREATE TABLE IF NOT EXISTS products (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id uuid NOT NULL REFERENCES workspaces (id) ON DELETE CASCADE,
@@ -37,21 +40,22 @@ CREATE TABLE IF NOT EXISTS products (
 
 CREATE INDEX IF NOT EXISTS idx_products_workspace_id ON products (workspace_id);
 
--- Assets (logo, product images, scraped, creatives)
+-- C) assets
 CREATE TABLE IF NOT EXISTS assets (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id uuid NOT NULL REFERENCES workspaces (id) ON DELETE CASCADE,
   product_id uuid REFERENCES products (id) ON DELETE SET NULL,
   created_at timestamptz NOT NULL DEFAULT now(),
-  kind text NOT NULL,
+  kind text,
   external_url text,
   storage_path text,
   meta jsonb
 );
 
 CREATE INDEX IF NOT EXISTS idx_assets_workspace_id ON assets (workspace_id);
+CREATE INDEX IF NOT EXISTS idx_assets_product_id ON assets (product_id);
 
--- Creatives (scaffold for later)
+-- D) creatives (scaffold)
 CREATE TABLE IF NOT EXISTS creatives (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id uuid NOT NULL REFERENCES workspaces (id) ON DELETE CASCADE,
@@ -65,33 +69,14 @@ CREATE TABLE IF NOT EXISTS creatives (
 
 CREATE INDEX IF NOT EXISTS idx_creatives_workspace_id ON creatives (workspace_id);
 
--- RLS: strict, no direct client access; server uses service role
+-- RLS: enable but deny by default; server uses service role to bypass
 ALTER TABLE workspaces ENABLE ROW LEVEL SECURITY;
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE assets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE creatives ENABLE ROW LEVEL SECURITY;
 
--- No policies that allow anon/authenticated; service role bypasses RLS
-CREATE POLICY "No public access workspaces" ON workspaces FOR ALL USING (false);
-CREATE POLICY "No public access products" ON products FOR ALL USING (false);
-CREATE POLICY "No public access assets" ON assets FOR ALL USING (false);
-CREATE POLICY "No public access creatives" ON creatives FOR ALL USING (false);
-
--- updated_at trigger for workspaces
-CREATE OR REPLACE FUNCTION set_updated_at()
-RETURNS TRIGGER AS $$
-BEGIN
-  NEW.updated_at = now();
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-DROP TRIGGER IF EXISTS workspaces_updated_at ON workspaces;
-CREATE TRIGGER workspaces_updated_at
-  BEFORE UPDATE ON workspaces
-  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-
-DROP TRIGGER IF EXISTS products_updated_at ON products;
-CREATE TRIGGER products_updated_at
-  BEFORE UPDATE ON products
-  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+-- No policies that allow anon/authenticated; all access via service role
+CREATE POLICY "No direct client access workspaces" ON workspaces FOR ALL USING (false);
+CREATE POLICY "No direct client access products" ON products FOR ALL USING (false);
+CREATE POLICY "No direct client access assets" ON assets FOR ALL USING (false);
+CREATE POLICY "No direct client access creatives" ON creatives FOR ALL USING (false);
