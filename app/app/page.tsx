@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
@@ -12,7 +12,7 @@ type WorkspaceInfo = {
   logo_storage_path: string | null;
 };
 
-export default function AppHome() {
+function AppHomeContent() {
   const searchParams = useSearchParams();
   const workspaceIdParam = searchParams.get("workspaceId");
   const [workspace, setWorkspace] = useState<WorkspaceInfo | null>(null);
@@ -118,5 +118,19 @@ export default function AppHome() {
         <p className="mt-2 text-[13px] text-gray-400">Generators coming soon</p>
       </section>
     </div>
+  );
+}
+
+export default function AppHome() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[40vh] items-center justify-center p-8">
+          <span className="h-6 w-6 animate-spin rounded-full border-2 border-brand-300 border-t-brand-600" />
+        </div>
+      }
+    >
+      <AppHomeContent />
+    </Suspense>
   );
 }
