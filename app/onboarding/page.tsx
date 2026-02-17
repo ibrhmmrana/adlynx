@@ -2,9 +2,7 @@
 
 import { Suspense, useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { signIn } from "next-auth/react";
 import type { ScanResult, Product } from "@/lib/brand/types";
-import type { GbpProfile } from "@/lib/gbp/types";
 import { ProductListPanel } from "@/components/brand/ProductList";
 import { AssetLibrary } from "@/components/brand/AssetLibrary";
 
@@ -55,7 +53,6 @@ function OnboardingWizard() {
   const [scanning, setScanning] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
-  const [gbpProfile, setGbpProfile] = useState<GbpProfile | null>(null);
   const [bootstrapping, setBootstrapping] = useState(false);
   const [bootstrapError, setBootstrapError] = useState<string | null>(null);
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
@@ -89,8 +86,7 @@ function OnboardingWizard() {
 
   useEffect(() => {
     if (!scanResult) return;
-    const fromGbp = gbpProfile?.locations?.[0]?.locationName;
-    setBrandName(fromGbp || scanResult.businessName || "");
+    setBrandName(scanResult.businessName || "");
     setSellingType(scanResult.sellingType || "");
     setLogoUrl(scanResult.logoUrl || "");
     setTagline(scanResult.tagline || "");
@@ -102,7 +98,7 @@ function OnboardingWizard() {
     setMission(scanResult.mission || "");
     setProducts(scanResult.products || []);
     setAllImages(scanResult.allImages || []);
-  }, [scanResult, gbpProfile]);
+  }, [scanResult]);
 
   useEffect(() => {
     if (step !== "connect" || !url.trim() || connectScanStarted.current) return;
@@ -158,14 +154,6 @@ function OnboardingWizard() {
       runBootstrap();
     }
   }, [step, scanResult, scanning, workspaceId]);
-
-  useEffect(() => {
-    if (step !== "connect" && step !== "details") return;
-    fetch("/api/gbp/profile")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => (data ? setGbpProfile(data) : null))
-      .catch(() => {});
-  }, [step]);
 
   function handleScan(e: React.FormEvent) {
     e.preventDefault();
@@ -260,34 +248,8 @@ function OnboardingWizard() {
       {step === "connect" && (
         <section className="flex min-h-screen flex-col items-center justify-center px-6 pt-14">
           <div className="mx-auto w-full max-w-md text-center">
-            <h2 className="text-2xl font-bold tracking-tight text-gray-900">Connect your Google Business Profile</h2>
-            <p className="mt-2 text-[15px] text-gray-500">While you sign in, we&apos;ll analyze your website so your details are ready when you are.</p>
-
-            {gbpProfile && (gbpProfile.locations.length > 0 || gbpProfile.averageRating != null) && (
-              <div className="mt-6 w-full rounded-xl border border-gray-200 bg-white p-4 text-left shadow-sm">
-                <div className="flex items-center gap-2 text-[13px] font-semibold text-gray-700">
-                  <GoogleIcon className="h-4 w-4 shrink-0" />
-                  Your Google Business Profile
-                </div>
-                <div className="mt-3 space-y-1.5 text-[14px] text-gray-700">
-                  {gbpProfile.locations[0]?.locationName && (
-                    <p className="font-medium text-gray-900">{gbpProfile.locations[0].locationName}</p>
-                  )}
-                  {gbpProfile.averageRating != null && (
-                    <p className="flex items-center gap-1.5">
-                      <span className="text-amber-500">★</span>
-                      <span>{gbpProfile.averageRating}</span>
-                      {gbpProfile.totalReviewCount > 0 && (
-                        <span className="text-gray-500">({gbpProfile.totalReviewCount} reviews)</span>
-                      )}
-                    </p>
-                  )}
-                  {gbpProfile.locations[0]?.address && (
-                    <p className="text-gray-600">{gbpProfile.locations[0].address}</p>
-                  )}
-                </div>
-              </div>
-            )}
+            <h2 className="text-2xl font-bold tracking-tight text-gray-900">Setting up your workspace</h2>
+            <p className="mt-2 text-[15px] text-gray-500">We&apos;re analyzing your website and saving your brand profile.</p>
 
             <div className="mt-8 flex flex-col items-center gap-6">
               {scanning && (
@@ -337,23 +299,6 @@ function OnboardingWizard() {
                   </div>
                 </div>
               )}
-              <div className="w-full">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const base = typeof window !== "undefined" ? window.location.origin : "";
-                    const callbackUrl = url.trim()
-                      ? `${base}/onboarding?step=connect&url=${encodeURIComponent(url.trim())}`
-                      : `${base}/onboarding?step=connect`;
-                    signIn("google", { callbackUrl });
-                  }}
-                  className="flex w-full items-center justify-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-[15px] font-medium text-gray-700 shadow-sm transition hover:bg-gray-50"
-                >
-                  <GoogleIcon className="h-5 w-5" />
-                  Sign in with Google Business Profile
-                </button>
-                <p className="mt-3 text-[12px] text-gray-400">We&apos;ll use your business name, ratings and reviews to prefill your profile.</p>
-              </div>
             </div>
             {!scanning && scanResult && workspaceId && (
               <button type="button" onClick={() => router.push("/app")} className="mt-8 flex w-full items-center justify-center gap-2 rounded-xl bg-brand-600 py-3.5 text-[14px] font-semibold text-white shadow-sm transition hover:bg-brand-700 active:scale-[0.98]">
@@ -388,27 +333,6 @@ function OnboardingWizard() {
               <h2 className="text-2xl font-bold tracking-tight text-gray-900">Tell us about your brand</h2>
               <p className="mt-2 text-[15px] text-gray-500">Confirm your details below.</p>
             </div>
-            {gbpProfile && (gbpProfile.totalReviewCount > 0 || gbpProfile.locations.length > 0) && (
-              <div className="mb-6 rounded-xl border border-gray-200 bg-gray-50/80 p-4">
-                <div className="flex items-center gap-2 text-[13px] font-semibold text-gray-700"><GoogleIcon className="h-4 w-4" /> From Google Business Profile</div>
-                <div className="mt-2 flex flex-wrap items-center gap-3 text-[13px] text-gray-600">
-                  {gbpProfile.averageRating != null && <span className="flex items-center gap-1">★ {gbpProfile.averageRating}{gbpProfile.totalReviewCount > 0 && <span className="text-gray-400">({gbpProfile.totalReviewCount} reviews)</span>}</span>}
-                  {gbpProfile.locations[0]?.locationName && <span>Business: {gbpProfile.locations[0].locationName}</span>}
-                </div>
-                {gbpProfile.reviews.length > 0 && (
-                  <div className="mt-3 space-y-2 border-t border-gray-200 pt-3">
-                    {gbpProfile.reviews.slice(0, 3).map((r, i) => (
-                      <div key={i} className="text-[12px] text-gray-600">
-                        <span className="font-medium text-gray-700">{r.reviewerDisplayName}</span>
-                        <span className="text-gray-400"> · </span>
-                        <span>{["ONE", "TWO", "THREE", "FOUR", "FIVE"].indexOf(r.starRating) + 1}★</span>
-                        {r.comment && <p className="mt-0.5 line-clamp-2 text-gray-500">{r.comment}</p>}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
             <div className="space-y-5">
               <div>
                 <label className="mb-1 block text-[14px] font-semibold text-gray-700">Brand name</label>
