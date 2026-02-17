@@ -65,10 +65,10 @@ function ProductDetail({
 
   return (
     <div className="space-y-6">
-      {/* Product images: main image left, two rows of thumbs right (scrollable) */}
-      <div>
+      {/* Product images: main image left, horizontal scroller for thumbs only */}
+      <div className="min-w-0 overflow-hidden">
         <p className="mb-2 text-[14px] font-semibold text-gray-700">Product images</p>
-        <div className="flex gap-4">
+        <div className="flex gap-4 min-w-0">
           {/* Main image */}
           <div className="h-[280px] w-[280px] shrink-0 overflow-hidden rounded-xl border-2 border-gray-200 bg-gray-50">
             {primaryImage ? (
@@ -79,27 +79,21 @@ function ProductDetail({
               </div>
             )}
           </div>
-          {/* Two rows of thumbs in their own scroll container (horizontal only) */}
+          {/* Horizontal scroller for thumbs only (no page scroll) */}
           {otherImages.length > 0 && (
-            <div className="flex-1 min-w-0 max-w-full overflow-hidden">
-              <div className="product-thumbs-scroll h-[280px] overflow-x-auto overflow-y-hidden rounded-xl border border-gray-200 bg-gray-50/50">
-                <div
-                  className="grid h-full w-max min-w-full gap-2 p-2"
-                  style={{
-                    gridTemplateRows: "1fr 1fr",
-                    gridAutoColumns: "140px",
-                    gridAutoFlow: "column",
-                  }}
-                >
-                  {otherImages.map((img, i) => (
-                    <div
-                      key={i}
-                      className="min-h-0 overflow-hidden rounded-lg border border-gray-200 bg-gray-50"
-                    >
-                      <img src={img} alt="" className="h-full w-full object-cover" />
-                    </div>
-                  ))}
-                </div>
+            <div className="min-w-0 flex-1 overflow-hidden rounded-xl border border-gray-200 bg-gray-50/50">
+              <div
+                className="flex h-[280px] flex-nowrap gap-2 overflow-x-auto overflow-y-hidden p-2"
+                style={{ scrollbarGutter: "stable" }}
+              >
+                {otherImages.map((img, i) => (
+                  <div
+                    key={i}
+                    className="h-full w-[140px] shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-gray-50"
+                  >
+                    <img src={img} alt="" className="h-full w-full object-cover" />
+                  </div>
+                ))}
               </div>
             </div>
           )}
