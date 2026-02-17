@@ -2,11 +2,15 @@ import { chromium as pwChromium } from "playwright-core";
 import type { Browser, Page } from "playwright-core";
 import chromium from "@sparticuz/chromium";
 import type { PageContent, AggregatedScrape } from "./types";
+import { dedupeImageUrls } from "./dedupeImageUrls";
 
-const NAV_TIMEOUT_MS = 45000;
-const POST_LOAD_WAIT_MS = 2500;
-const DEFAULT_TIMEOUT_MS = 20000;
-const MAX_PAGES = 6;
+/** Keep total crawl well under the route deadline (~55 s). */
+const NAV_TIMEOUT_MS = 18_000;
+const POST_LOAD_WAIT_MS = 1_200;
+const KEY_PAGE_NAV_TIMEOUT_MS = 10_000;
+const DEFAULT_TIMEOUT_MS = 12_000;
+const MAX_PAGES = 3;
+const AUTO_SCROLL_CAP_MS = 5_000;
 const KEY_PAGE_PATTERNS = [
   { type: "about", patterns: [/about/i, /who-we-are/i, /our-story/i, /company/i] },
   { type: "services", patterns: [/service/i, /what-we-do/i, /solution/i, /offer/i, /product/i] },
@@ -36,7 +40,7 @@ export async function launchBrowser(): Promise<Browser> {
       "--disable-gpu",
     ],
     executablePath,
-    timeout: 60000,
+    timeout: 20_000,
   });
 }
 
@@ -72,14 +76,14 @@ function extractPageContentPayload(): string {
         if (mainText.length > 100) break;
       }
     }
-    if (mainText.length < 100) {
+    if (mainText.length < 100 && document.body) {
       const bodyClone = document.body.cloneNode(true);
       bodyClone.querySelectorAll('nav, footer, header, script, style, noscript, aside').forEach(e => e.remove());
       mainText = (bodyClone.innerText || '').trim();
     }
     mainText = mainText.substring(0, 8000);
 
-    const aboveFoldText = (document.body?.innerText || '').substring(0, 800).replace(/\\s+/g, ' ').trim();
+    const aboveFoldText = (document.body ? document.body.innerText || '' : '').substring(0, 800).replace(/\\s+/g, ' ').trim();
 
     // Third-party domains and containers to ignore for logos and images
     const THIRD_PARTY_DOMAINS = /cookieyes|onetrust|cookiebot|hubspot|intercom|drift|tawk|livechat|tidio|crisp\.chat|zendesk|freshdesk|olark|purechat|chatra|smartsupp|userlike|gorgias|facebook\.net|fbcdn|google-analytics|googletagmanager|hotjar|clarity\.ms/i;
@@ -92,15 +96,58 @@ function extractPageContentPayload(): string {
       return THIRD_PARTY_DOMAINS.test(src);
     };
 
+    // --- Logo: prefer JSON-LD Organization.logo, then scored DOM candidates ---
     let logoUrl = null;
-    const logoSelectors = ['img[class*="logo"]', 'img[id*="logo"]', 'img[alt*="logo"]', '.logo img', '#logo img', 'header img:first-of-type'];
-    for (const sel of logoSelectors) {
-      const img = document.querySelector(sel);
-      if (img && img instanceof HTMLImageElement && img.src && !isInsideThirdParty(img) && !isThirdPartySrc(img.src)) {
-        logoUrl = img.src;
-        break;
+    const jsonLdScriptsForLogo = Array.from(document.querySelectorAll('script[type="application/ld+json"]'));
+    for (const script of jsonLdScriptsForLogo) {
+      try {
+        const obj = JSON.parse(script.textContent || '{}');
+        if (obj['@type'] === 'Organization' && obj.logo) {
+          const l = obj.logo;
+          logoUrl = typeof l === 'string' ? l : (l.url || l);
+          break;
+        }
+        if (Array.isArray(obj['@graph'])) {
+          for (const node of obj['@graph']) {
+            if (node && node['@type'] === 'Organization' && node.logo) {
+              const l = node.logo;
+              logoUrl = typeof l === 'string' ? l : (l.url || l);
+              break;
+            }
+          }
+          if (logoUrl) break;
+        }
+      } catch {}
+    }
+    if (!logoUrl) {
+      const homePath = window.location.pathname === '' || window.location.pathname === '/' ? window.location.href : new URL('/', window.location.origin).href;
+      const candidates = [];
+      document.querySelectorAll('header img, nav img, [role="banner"] img, .header img, .nav img, .site-header img, .navbar img, img[class*="logo"], img[id*="logo"], img[alt*="logo"], .logo img, #logo img').forEach(img => {
+        if (!img || !(img instanceof HTMLImageElement) || !img.src || isInsideThirdParty(img) || isThirdPartySrc(img.src)) return;
+        const src = img.currentSrc || img.src;
+        let score = 0;
+        const inHeader = !!img.closest('header, nav, [role="banner"], .header, .nav, .site-header, .navbar');
+        if (inHeader) score += 3;
+        const parentLink = img.closest('a');
+        if (parentLink && parentLink.href) {
+          try {
+            const u = new URL(parentLink.href, window.location.origin);
+            if (u.pathname === '/' || u.pathname === '' || u.href === homePath) score += 2;
+          } catch {}
+        }
+        const c = (img.className || '').toLowerCase(); const id = (img.id || '').toLowerCase(); const alt = (img.alt || '').toLowerCase();
+        if (/logo|brand/.test(c + id + alt)) score += 2;
+        const w = img.naturalWidth || img.width || 0; const h = img.naturalHeight || img.height || 0;
+        if (w >= 40 && h >= 40 && w <= 500 && h <= 500) score += 1;
+        else if (w < 24 || h < 24) score -= 2;
+        candidates.push({ src, score });
+      });
+      if (candidates.length > 0) {
+        candidates.sort((a, b) => b.score - a.score);
+        logoUrl = candidates[0].score > 0 ? candidates[0].src : null;
       }
     }
+    if (!logoUrl && ogImage) logoUrl = ogImage;
 
     let heroImage = null;
     let maxSize = 0;
@@ -157,6 +204,19 @@ function extractPageContentPayload(): string {
     const themeColor = document.querySelector('meta[name="theme-color"]')?.getAttribute('content');
     if (themeColor) colors.push(themeColor);
 
+    // Sample computed colors from header, nav, buttons, links (brand-like UI)
+    const elementColors = [];
+    const colorEls = document.querySelectorAll('header, nav, [role="banner"], .header, .site-header, .navbar, button, .btn, [class*="button"], a[class*="cta"], a[class*="btn"], .header a, nav a');
+    colorEls.forEach(el => {
+      try {
+        const style = getComputedStyle(el);
+        const bg = style.backgroundColor;
+        const fg = style.color;
+        if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') elementColors.push(bg);
+        if (fg && fg !== 'rgba(0, 0, 0, 0)' && fg !== 'transparent') elementColors.push(fg);
+      } catch {}
+    });
+
     const footerText = document.querySelector('footer')?.textContent?.trim()?.substring(0, 500) || null;
 
     // --- Extended: Logo system (skip third-party widget logos) ---
@@ -178,6 +238,7 @@ function extractPageContentPayload(): string {
     });
 
     // --- Extended: CSS variables (colors only) ---
+    const colorNameRe = /color|primary|secondary|accent|neutral|background|surface|border|success|warning|error|info|gradient|hue|foreground|button|base|link|brand|theme|fill|stroke/i;
     const colorSystemRaw = {};
     try {
       const root = document.documentElement;
@@ -187,8 +248,7 @@ function extractPageContentPayload(): string {
         if (!prop.startsWith('--')) continue;
         const val = style.getPropertyValue(prop).trim();
         if (!val) continue;
-        if (/color|primary|secondary|accent|neutral|background|surface|border|success|warning|error|info|gradient|hue|foreground/i.test(prop))
-          colorSystemRaw[prop] = val;
+        if (colorNameRe.test(prop) && /^#|rgb|rgba|hsl|hsla/.test(val)) colorSystemRaw[prop] = val;
       }
       const themeColorMeta = document.querySelector('meta[name="theme-color"]')?.getAttribute('content');
       if (themeColorMeta) colorSystemRaw['--theme-color'] = themeColorMeta;
@@ -204,7 +264,7 @@ function extractPageContentPayload(): string {
                 if (!prop.startsWith('--')) continue;
                 const val = rule.style.getPropertyValue(prop).trim();
                 if (!val) continue;
-                if (!(prop in colorSystemRaw) && /color|primary|secondary|accent|neutral|background|surface|border|success|warning|error|info|gradient/i.test(prop))
+                if (!(prop in colorSystemRaw) && colorNameRe.test(prop) && /^#|rgb|rgba|hsl|hsla/.test(val))
                   colorSystemRaw[prop] = val;
               }
             }
@@ -227,17 +287,17 @@ function extractPageContentPayload(): string {
         if (ctaTexts.indexOf(t) === -1) ctaTexts.push(t);
     });
 
-    // --- Extended: All images (comprehensive, skip third-party) ---
-    const imgSet = new Set();
+    // --- Extended: All images (dedupe by path so same image with different ?w= / size suffix = one) ---
+    const imgByPath = {};
     const addImg = (u) => {
       if (!u || typeof u !== 'string') return;
       try {
         const abs = new URL(u, window.location.origin).href;
-        // Skip data URIs that are tiny (tracking pixels / placeholders)
         if (abs.startsWith('data:') && abs.length < 200) return;
-        // Skip third-party image domains
         if (THIRD_PARTY_DOMAINS.test(abs)) return;
-        imgSet.add(abs);
+        const key = new URL(abs).origin + new URL(abs).pathname;
+        const existing = imgByPath[key];
+        if (!existing || !new URL(abs).search) imgByPath[key] = abs;
       } catch {}
     };
 
@@ -270,7 +330,7 @@ function extractPageContentPayload(): string {
     // 4) CSS background-image on visible elements
     const seen = new Set();
     document.querySelectorAll('div, section, header, footer, article, aside, figure, span, a, li').forEach(el => {
-      if (seen.has(el) || imgSet.size > 250) return;
+      if (seen.has(el) || Object.keys(imgByPath).length > 250) return;
       seen.add(el);
       try {
         const bg = getComputedStyle(el).backgroundImage;
@@ -294,7 +354,7 @@ function extractPageContentPayload(): string {
       addImg(m.getAttribute('content'));
     });
 
-    const allImageUrls = [...imgSet].slice(0, 250);
+    const allImageUrls = Object.values(imgByPath).slice(0, 250);
     const mediaKitLinks = [];
     document.querySelectorAll('a[href]').forEach(a => {
       const href = (a.getAttribute('href') || '').toLowerCase();
@@ -311,6 +371,7 @@ function extractPageContentPayload(): string {
       copySamples: { buttonTexts: buttonTexts.slice(0, 25), ctaTexts: ctaTexts.slice(0, 25) },
       allImageUrls,
       mediaKitLinks: [...new Set(mediaKitLinks)].slice(0, 20),
+      elementColors: [...new Set(elementColors)].slice(0, 30),
     };
   })();
   `;
@@ -332,8 +393,8 @@ async function autoScroll(page: Page): Promise<void> {
           resolve();
         }
       }, 150);
-      // Safety cap: stop after 15 seconds
-      setTimeout(() => { clearInterval(timer); window.scrollTo(0, 0); resolve(); }, 15000);
+      // Safety cap
+      setTimeout(() => { clearInterval(timer); window.scrollTo(0, 0); resolve(); }, 5000);
     });
   });
 }
@@ -389,13 +450,17 @@ async function dismissOverlays(page: Page): Promise<void> {
   await new Promise((r) => setTimeout(r, 300));
 }
 
-export async function scrapePage(page: Page): Promise<PageContent> {
-  // Dismiss cookie banners and third-party overlays first
+/**
+ * Scrape a single page.
+ * @param fullScrape  When true, runs auto-scroll + extra wait to trigger lazy
+ *                    images. Use for the home page; skip on subpages to save time.
+ */
+export async function scrapePage(page: Page, fullScrape = false): Promise<PageContent> {
   await dismissOverlays(page);
-  // Scroll to trigger lazy loading
-  await autoScroll(page);
-  // Small wait for images triggered by scroll to start loading
-  await new Promise((r) => setTimeout(r, 1500));
+  if (fullScrape) {
+    await autoScroll(page);
+    await new Promise((r) => setTimeout(r, 1200));
+  }
   const raw = await page.evaluate(extractPageContentPayload());
   return raw as PageContent;
 }
@@ -441,14 +506,23 @@ export async function discoverInternalLinks(
   return Array.from(byType.entries()).map(([type, url]) => ({ url, type }));
 }
 
-export async function crawlWebsite(inputUrl: string): Promise<AggregatedScrape> {
+function throwIfAborted(signal?: AbortSignal | null): void {
+  if (signal?.aborted) throw new Error("Scan timed out");
+}
+
+export async function crawlWebsite(
+  inputUrl: string,
+  signal?: AbortSignal | null
+): Promise<AggregatedScrape> {
   let url = inputUrl.trim();
   if (!url.startsWith("http")) url = "https://" + url;
   const parsed = new URL(url);
   const baseDomain = parsed.hostname;
 
+  throwIfAborted(signal);
   const browser = await launchBrowser();
   try {
+    throwIfAborted(signal);
     const context = await browser.newContext({
       userAgent:
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -462,7 +536,25 @@ export async function crawlWebsite(inputUrl: string): Promise<AggregatedScrape> 
       { url, type: "home" },
     ];
 
-    await page.goto(url, { waitUntil: "domcontentloaded", timeout: NAV_TIMEOUT_MS });
+    throwIfAborted(signal);
+    let homeNavTimedOut = false;
+    try {
+      await page.goto(url, { waitUntil: "domcontentloaded", timeout: NAV_TIMEOUT_MS });
+    } catch (navErr) {
+      if (navErr instanceof Error && /[Tt]imeout/.test(navErr.message)) {
+        homeNavTimedOut = true;
+      } else {
+        throw navErr;
+      }
+    }
+    if (homeNavTimedOut) {
+      try {
+        await page.waitForSelector("body", { timeout: 8_000 });
+      } catch {
+        throw new Error("Page body never loaded");
+      }
+    }
+    throwIfAborted(signal);
     await new Promise((r) => setTimeout(r, POST_LOAD_WAIT_MS));
     const keyPages = await discoverInternalLinks(page, baseDomain);
     for (const kp of keyPages) {
@@ -472,17 +564,25 @@ export async function crawlWebsite(inputUrl: string): Promise<AggregatedScrape> 
       }
     }
 
-    const homeContent = await scrapePage(page);
+    throwIfAborted(signal);
+    const homeContent = await scrapePage(page, true);
     const allContents: { type: string; content: PageContent }[] = [
       { type: "home", content: homeContent },
     ];
 
     for (let i = 1; i < pagesToCrawl.length; i++) {
+      if (signal?.aborted) break;
       const { url: pageUrl } = pagesToCrawl[i];
       try {
-        await page.goto(pageUrl, { waitUntil: "domcontentloaded", timeout: 20000 });
-        await new Promise((r) => setTimeout(r, 2000));
-        const content = await scrapePage(page);
+        try {
+          await page.goto(pageUrl, { waitUntil: "domcontentloaded", timeout: KEY_PAGE_NAV_TIMEOUT_MS });
+        } catch (navErr) {
+          if (!(navErr instanceof Error && /[Tt]imeout/.test(navErr.message))) {
+            throw navErr;
+          }
+        }
+        await new Promise((r) => setTimeout(r, 800));
+        const content = await scrapePage(page, false);
         allContents.push({
           type: pagesToCrawl[i].type,
           content,
@@ -544,8 +644,9 @@ function aggregateScrapeData(
   const colorSystemRaw: Record<string, string> = {};
   const buttonTextsSet = new Set<string>();
   const ctaTextsSet = new Set<string>();
-  const allImageUrlsSet = new Set<string>();
+  const allImageUrlsAccum: string[] = [];
   const mediaKitUrlsSet = new Set<string>();
+  const elementColorsAccum: string[] = [];
 
   for (const { content } of sorted) {
     const ext = content as PageContent;
@@ -558,9 +659,12 @@ function aggregateScrapeData(
       ext.copySamples.buttonTexts.forEach((t) => buttonTextsSet.add(t));
       ext.copySamples.ctaTexts.forEach((t) => ctaTextsSet.add(t));
     }
-    if (ext.allImageUrls) ext.allImageUrls.forEach((u) => allImageUrlsSet.add(u));
+    if (ext.allImageUrls) allImageUrlsAccum.push(...ext.allImageUrls);
     if (ext.mediaKitLinks) ext.mediaKitLinks.forEach((u) => mediaKitUrlsSet.add(u));
+    if (ext.elementColors) elementColorsAccum.push(...ext.elementColors);
   }
+
+  const allImageUrlsDeduped = dedupeImageUrls(allImageUrlsAccum, 300);
 
   return {
     url,
@@ -590,7 +694,8 @@ function aggregateScrapeData(
     logoSystemRaw: logoUrlsSet.size || faviconsMap.size ? { logoUrls: [...logoUrlsSet], favicons: [...faviconsMap.values()] } : undefined,
     colorSystemRaw: Object.keys(colorSystemRaw).length ? colorSystemRaw : undefined,
     copySamples: { buttonTexts: [...buttonTextsSet].slice(0, 30), ctaTexts: [...ctaTextsSet].slice(0, 30) },
-    allImageUrls: [...allImageUrlsSet].slice(0, 300),
+    allImageUrls: allImageUrlsDeduped,
     mediaKitUrls: [...mediaKitUrlsSet],
+    elementColors: elementColorsAccum.length ? [...new Set(elementColorsAccum)].slice(0, 50) : undefined,
   };
 }

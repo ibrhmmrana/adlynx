@@ -1,10 +1,25 @@
 import type { Metadata } from "next";
+import { Inter, Instrument_Serif } from "next/font/google";
 import "./globals.css";
 
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
+
+const instrumentSerif = Instrument_Serif({
+  subsets: ["latin"],
+  weight: "400",
+  style: ["normal", "italic"],
+  variable: "--font-serif",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
-  title: "AdLynx — URL to ads in 2 minutes",
+  title: "AdLynx — From URL to ads in minutes",
   description:
-    "Performance media powered by hybrid intelligence. Scan your website, get your brand profile, and go from URL to ads.",
+    "Paste your website URL and AdLynx extracts your full brand profile — colors, logos, voice, content structure — ready to launch performance campaigns.",
 };
 
 export default function RootLayout({
@@ -13,8 +28,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className="antialiased font-sans min-h-screen">
+    <html lang="en" className={`${inter.variable} ${instrumentSerif.variable}`}>
+      <body className="antialiased font-sans min-h-screen bg-[#fafafa]">
         {children}
       </body>
     </html>

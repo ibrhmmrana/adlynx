@@ -1,4 +1,21 @@
-import type { AggregatedScrape, BrandProfile } from "./types";
+import type { AggregatedScrape } from "./types";
+
+/** Shape returned by the profile extractor */
+export interface ExtractedProfile {
+  businessName: string;
+  tagline: string | null;
+  industry: string | null;
+  websiteUrl: string;
+  domain: string;
+  logoUrl: string | null;
+  heroImageUrl: string | null;
+  brandColors: string[];
+  ogImage: string | null;
+  socialLinks: { platform: string; url: string }[];
+  services: string[];
+  aboutText: string | null;
+  homepageText: string | null;
+}
 
 function extractNameFromStructuredData(sd: unknown[]): string | null {
   for (const item of sd as { name?: string; "@graph"?: { name?: string; "@type"?: string }[] }[]) {
@@ -45,15 +62,13 @@ function extractIndustryFromStructuredData(sd: unknown[]): string | null {
   return null;
 }
 
-function extractServices(h2s: string[], _servicesText: string | null): string[] {
+function extractServices(h2s: string[]): string[] {
   return h2s
     .filter((h) => h.length > 3 && h.length < 80)
     .slice(0, 10);
 }
 
-export function extractBrandProfile(
-  data: AggregatedScrape
-): Partial<BrandProfile> {
+export function extractBrandProfile(data: AggregatedScrape): ExtractedProfile {
   const businessName =
     extractNameFromStructuredData(data.structuredData) ||
     data.ogSiteName ||
@@ -62,7 +77,7 @@ export function extractBrandProfile(
 
   const tagline = data.allH1[0] || data.ogDescription || null;
   const industry = extractIndustryFromStructuredData(data.structuredData);
-  const services = extractServices(data.allH2, data.servicesPageText);
+  const services = extractServices(data.allH2);
 
   return {
     businessName,
