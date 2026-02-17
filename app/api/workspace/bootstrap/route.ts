@@ -103,7 +103,8 @@ export async function POST(request: Request) {
     .eq("workspace_id", workspaceId)
     .order("created_at", { ascending: true });
 
-  const productIdList = insertedProducts ?? [];
+  type ProductRow = { id: string; images_external: string[] | null };
+  const productIdList: ProductRow[] = (insertedProducts ?? []) as ProductRow[];
 
   const assetsToInsert: { workspace_id: string; product_id: string | null; kind: string; external_url: string | null; storage_path: string | null; meta: null }[] = [];
 
