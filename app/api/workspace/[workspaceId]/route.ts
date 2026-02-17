@@ -60,8 +60,7 @@ export async function PATCH(
 
   const { data: workspace, error } = await supabase
     .from("workspaces")
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase client infers update as never with our Database type
-.update(update as any)
+    .update(update)
     .eq("id", workspaceId)
     .eq("guest_id", guestId)
     .select()
