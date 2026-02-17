@@ -61,6 +61,7 @@ function OnboardingWizard() {
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const connectScanStarted = useRef(false);
   const bootstrapAttempted = useRef(false);
+  const [scanTrigger, setScanTrigger] = useState(0);
 
   const [brandName, setBrandName] = useState("");
   const [sellingType, setSellingType] = useState<"products" | "saas" | "services" | "">("");
@@ -74,8 +75,10 @@ function OnboardingWizard() {
   useEffect(() => {
     const stepParam = searchParams.get("step");
     if (stepParam === "connect") {
+      const urlFromQuery = searchParams.get("url");
       const savedUrl = typeof window !== "undefined" ? sessionStorage.getItem(ONBOARDING_URL_KEY) : null;
-      if (savedUrl) setUrl(savedUrl);
+      const toRestore = urlFromQuery ? decodeURIComponent(urlFromQuery) : savedUrl;
+      if (toRestore) setUrl(toRestore);
       setStep("connect");
     }
   }, [searchParams]);
@@ -124,7 +127,7 @@ function OnboardingWizard() {
       })
       .catch(() => setScanError("Scan failed"))
       .finally(() => setScanning(false));
-  }, [step, url]);
+  }, [step, url, scanTrigger]);
 
   async function runBootstrap() {
     if (!scanResult) return;
@@ -259,6 +262,33 @@ function OnboardingWizard() {
           <div className="mx-auto w-full max-w-md text-center">
             <h2 className="text-2xl font-bold tracking-tight text-gray-900">Connect your Google Business Profile</h2>
             <p className="mt-2 text-[15px] text-gray-500">While you sign in, we&apos;ll analyze your website so your details are ready when you are.</p>
+
+            {gbpProfile && (gbpProfile.locations.length > 0 || gbpProfile.averageRating != null) && (
+              <div className="mt-6 w-full rounded-xl border border-gray-200 bg-white p-4 text-left shadow-sm">
+                <div className="flex items-center gap-2 text-[13px] font-semibold text-gray-700">
+                  <GoogleIcon className="h-4 w-4 shrink-0" />
+                  Your Google Business Profile
+                </div>
+                <div className="mt-3 space-y-1.5 text-[14px] text-gray-700">
+                  {gbpProfile.locations[0]?.locationName && (
+                    <p className="font-medium text-gray-900">{gbpProfile.locations[0].locationName}</p>
+                  )}
+                  {gbpProfile.averageRating != null && (
+                    <p className="flex items-center gap-1.5">
+                      <span className="text-amber-500">★</span>
+                      <span>{gbpProfile.averageRating}</span>
+                      {gbpProfile.totalReviewCount > 0 && (
+                        <span className="text-gray-500">({gbpProfile.totalReviewCount} reviews)</span>
+                      )}
+                    </p>
+                  )}
+                  {gbpProfile.locations[0]?.address && (
+                    <p className="text-gray-600">{gbpProfile.locations[0].address}</p>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div className="mt-8 flex flex-col items-center gap-6">
               {scanning && (
                 <div className="flex items-center gap-3 rounded-full border border-brand-100 bg-brand-50 px-5 py-2.5">
@@ -280,8 +310,45 @@ function OnboardingWizard() {
                   Workspace saved
                 </div>
               )}
+              {!url.trim() && !scanning && (
+                <div className="w-full rounded-xl border border-amber-200 bg-amber-50/80 p-4 text-left">
+                  <p className="mb-2 text-[13px] font-medium text-amber-900">No website URL found. Enter it below to analyze:</p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="yourwebsite.com"
+                      value={url}
+                      onChange={(e) => setUrl(e.target.value)}
+                      className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-[14px]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (url.trim()) {
+                          sessionStorage.setItem(ONBOARDING_URL_KEY, url.trim());
+                          connectScanStarted.current = false;
+                          setScanTrigger((t) => t + 1);
+                        }
+                      }}
+                      className="rounded-lg bg-brand-600 px-4 py-2 text-[14px] font-medium text-white hover:bg-brand-700"
+                    >
+                      Analyze
+                    </button>
+                  </div>
+                </div>
+              )}
               <div className="w-full">
-                <button type="button" onClick={() => signIn("google", { callbackUrl: "/onboarding?step=connect" })} className="flex w-full items-center justify-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-[15px] font-medium text-gray-700 shadow-sm transition hover:bg-gray-50">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const base = typeof window !== "undefined" ? window.location.origin : "";
+                    const callbackUrl = url.trim()
+                      ? `${base}/onboarding?step=connect&url=${encodeURIComponent(url.trim())}`
+                      : `${base}/onboarding?step=connect`;
+                    signIn("google", { callbackUrl });
+                  }}
+                  className="flex w-full items-center justify-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-[15px] font-medium text-gray-700 shadow-sm transition hover:bg-gray-50"
+                >
                   <GoogleIcon className="h-5 w-5" />
                   Sign in with Google Business Profile
                 </button>
@@ -305,6 +372,11 @@ function OnboardingWizard() {
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
               </button>
             )}
+            <p className="mt-6">
+              <button type="button" onClick={() => router.push("/app")} className="text-[13px] text-gray-500 underline hover:text-gray-700">
+                Go to dashboard
+              </button>
+            </p>
           </div>
         </section>
       )}
