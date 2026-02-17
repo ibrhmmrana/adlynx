@@ -70,7 +70,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Failed to create workspace" }, { status: 500 });
   }
 
-  const workspaceId = workspace.id;
+  const workspaceId = (workspace as { id: string }).id;
 
   const productsArray = Array.isArray(productsInput) ? productsInput : [];
   const productRows: { workspace_id: string; external_id: string | null; title: string | null; description: string | null; url: string | null; vendor: string | null; price: string | null; images_external: string[]; images_storage: string[] | null }[] = [];
