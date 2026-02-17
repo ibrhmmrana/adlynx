@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { getGuestIdFromRequest } from "@/lib/supabase/cookies";
-import type { Database } from "@/lib/db/database.types";
 import type { Workspace } from "@/lib/db/types";
-
-type WorkspaceUpdate = Database["public"]["Tables"]["workspaces"]["Update"];
 
 export async function GET(
   _request: Request,
@@ -63,7 +60,8 @@ export async function PATCH(
 
   const { data: workspace, error } = await supabase
     .from("workspaces")
-    .update(update as WorkspaceUpdate)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase client infers update as never with our Database type
+.update(update as any)
     .eq("id", workspaceId)
     .eq("guest_id", guestId)
     .select()
