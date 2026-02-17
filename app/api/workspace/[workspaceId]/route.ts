@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { getGuestIdFromRequest } from "@/lib/supabase/cookies";
+import type { Database } from "@/lib/db/database.types";
 import type { Workspace } from "@/lib/db/types";
+
+type WorkspaceUpdate = Database["public"]["Tables"]["workspaces"]["Update"];
 
 export async function GET(
   _request: Request,
@@ -60,7 +63,7 @@ export async function PATCH(
 
   const { data: workspace, error } = await supabase
     .from("workspaces")
-    .update(update)
+    .update(update as WorkspaceUpdate)
     .eq("id", workspaceId)
     .eq("guest_id", guestId)
     .select()
