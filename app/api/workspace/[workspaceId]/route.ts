@@ -60,7 +60,7 @@ export async function PATCH(
 
   const { data: workspace, error } = await supabase
     .from("workspaces")
-    .update(update)
+    .update(update as never)
     .eq("id", workspaceId)
     .eq("guest_id", guestId)
     .select()
