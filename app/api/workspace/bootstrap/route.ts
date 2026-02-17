@@ -61,7 +61,7 @@ export async function POST(request: Request) {
 
   const { data: workspace, error: wsError } = await supabase
     .from("workspaces")
-    .insert(workspaceInsert)
+    .insert(workspaceInsert as never)
     .select("id")
     .single();
 
@@ -90,7 +90,7 @@ export async function POST(request: Request) {
   }
 
   if (productRows.length > 0) {
-    const { error: productsError } = await supabase.from("products").insert(productRows);
+    const { error: productsError } = await supabase.from("products").insert(productRows as never);
     if (productsError) {
       console.error("products insert error", productsError);
       return NextResponse.json({ error: "Failed to create products" }, { status: 500 });
@@ -137,7 +137,7 @@ export async function POST(request: Request) {
   }
 
   if (assetsToInsert.length > 0) {
-    const { error: assetsError } = await supabase.from("assets").insert(assetsToInsert);
+    const { error: assetsError } = await supabase.from("assets").insert(assetsToInsert as never);
     if (assetsError) {
       console.error("assets insert error", assetsError);
       return NextResponse.json({ error: "Failed to create assets" }, { status: 500 });
