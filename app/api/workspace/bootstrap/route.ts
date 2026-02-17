@@ -155,7 +155,7 @@ export async function POST(request: Request) {
             const ext = getImageExt(profile.logoUrl);
             const path = `workspace/${workspaceId}/logo/logo${ext}`;
             const { data: up } = await supabase.storage.from("adlynx").upload(path, buf, { contentType: getContentType(ext), upsert: true });
-            if (up?.path) await supabase.from("workspaces").update({ logo_storage_path: up.path }).eq("id", workspaceId);
+            if (up?.path) await supabase.from("workspaces").update({ logo_storage_path: up.path } as never).eq("id", workspaceId);
           }
         }
         for (const prod of productIdList) {
@@ -170,7 +170,7 @@ export async function POST(request: Request) {
               if (up?.path) paths.push(up.path);
             }
           }
-          if (paths.length > 0) await supabase.from("products").update({ images_storage: paths }).eq("id", prod.id);
+          if (paths.length > 0) await supabase.from("products").update({ images_storage: paths } as never).eq("id", prod.id);
         }
       } catch {
         // keep external_url only; do not fail bootstrap
