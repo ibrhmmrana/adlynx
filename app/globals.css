@@ -57,3 +57,22 @@
 .orb-delay-2 {
   animation-delay: -14s;
 }
+
+/* Minimal scrollbar for product thumbs (horizontal scroll container) */
+.product-thumbs-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+.product-thumbs-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+.product-thumbs-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.product-thumbs-scroll::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: 3px;
+}
+.product-thumbs-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.28);
+}

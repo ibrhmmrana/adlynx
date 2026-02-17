@@ -79,25 +79,27 @@ function ProductDetail({
               </div>
             )}
           </div>
-          {/* Two rows of thumbs, same height as main image, scroll horizontally */}
+          {/* Two rows of thumbs in their own scroll container (horizontal only) */}
           {otherImages.length > 0 && (
-            <div className="h-[280px] min-w-0 flex-1 overflow-x-auto overflow-y-hidden">
-              <div
-                className="grid h-full gap-2"
-                style={{
-                  gridTemplateRows: "1fr 1fr",
-                  gridAutoColumns: "140px",
-                  gridAutoFlow: "column",
-                }}
-              >
-                {otherImages.map((img, i) => (
-                  <div
-                    key={i}
-                    className="min-h-0 overflow-hidden rounded-xl border border-gray-200 bg-gray-50"
-                  >
-                    <img src={img} alt="" className="h-full w-full object-cover" />
-                  </div>
-                ))}
+            <div className="flex-1 min-w-0 max-w-full overflow-hidden">
+              <div className="product-thumbs-scroll h-[280px] overflow-x-auto overflow-y-hidden rounded-xl border border-gray-200 bg-gray-50/50">
+                <div
+                  className="grid h-full w-max min-w-full gap-2 p-2"
+                  style={{
+                    gridTemplateRows: "1fr 1fr",
+                    gridAutoColumns: "140px",
+                    gridAutoFlow: "column",
+                  }}
+                >
+                  {otherImages.map((img, i) => (
+                    <div
+                      key={i}
+                      className="min-h-0 overflow-hidden rounded-lg border border-gray-200 bg-gray-50"
+                    >
+                      <img src={img} alt="" className="h-full w-full object-cover" />
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           )}
