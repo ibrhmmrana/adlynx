@@ -4,12 +4,19 @@
  * Generates a UGC testimonial video using Sora 2 Pro only.
  * Requires OPENAI_API_KEY. Returns jobId for polling; client polls status then uses
  * /api/ugc/video?soraId=xxx to stream the MP4.
+ *
+ * Input reference images are resized to match Sora's requested size (720x1280) to avoid
+ * "Inpaint image must match the requested width and height" errors.
  */
 
 import { NextResponse } from "next/server";
+import sharp from "sharp";
 import { generateVeoPromptJson } from "@/lib/ugc/openaiVeoPrompt";
 import { startSoraGeneration } from "@/lib/ugc/soraVideo";
 import type { VeoPromptPayload } from "@/lib/ugc/veoPromptSchema";
+
+const SORA_WIDTH = 720;
+const SORA_HEIGHT = 1280;
 
 function buildSoraPrompt(vp: VeoPromptPayload): string {
   const p = vp.prompt;
@@ -52,6 +59,14 @@ async function fetchImageBuffer(url: string): Promise<Buffer | null> {
   }
 }
 
+/** Resize image to exact Sora input_reference size to avoid 400 "Inpaint image must match the requested width and height". */
+async function resizeToSoraSize(buffer: Buffer): Promise<Buffer> {
+  return sharp(buffer)
+    .resize(SORA_WIDTH, SORA_HEIGHT, { fit: "cover", position: "center" })
+    .jpeg({ quality: 90 })
+    .toBuffer();
+}
+
 type Body = {
   brand?: { name?: string; tagline?: string; mission?: string; colors?: Record<string, string>; websiteUrl?: string; domain?: string };
   product?: { title?: string; description?: string; imageUrl?: string };
@@ -83,10 +98,13 @@ export async function POST(request: Request) {
     ]);
 
     const soraPrompt = buildSoraPrompt(promptJson);
+    const soraImageBuffer =
+      imageBuffer != null ? await resizeToSoraSize(imageBuffer) : undefined;
     const { videoId } = await startSoraGeneration(soraPrompt, {
       seconds: 12,
       size: "720x1280",
-      imageBuffer: imageBuffer ?? undefined,
+      imageBuffer: soraImageBuffer,
+      imageName: "product.jpg",
     });
 
     console.info("[ugc/testimonial] requestId=%s soraVideoId=%s", requestId, videoId);

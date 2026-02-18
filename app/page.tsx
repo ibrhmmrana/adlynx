@@ -1086,11 +1086,16 @@ export default function Home() {
                 const loading = generatedAds?.loading;
                 const adError = generatedAds?.error;
                 const currentAd = ads[adCarouselIndex];
-                const hasMultiple = ads.length > 1;
                 const strategy = adsetStrategy?.strategy ?? null;
                 const strategyLoading = adsetStrategy?.loading === true;
                 const strategyError = adsetStrategy?.error;
-                const adLabel = currentAd?.type === "instagram-story" ? "Instagram story ad" : "Facebook ad";
+                const totalSlides = ads.length + (videoSkipped ? 0 : 1);
+                const isVideoSlide = !videoSkipped && adCarouselIndex === ads.length;
+                const slideLabel = isVideoSlide
+                  ? "UGC video"
+                  : currentAd?.type === "instagram-story"
+                    ? "Instagram story ad"
+                    : "Facebook ad";
                 const logoSrc = logoPreview || logoUrl || "";
 
                 const fbMockup = (ad: GeneratedAd) => (
@@ -1205,62 +1210,10 @@ export default function Home() {
                   </div>
                 );
 
-                return (
-                  <div className="mb-10">
-                    {adError && (<div className="mx-auto mb-4 max-w-md rounded-xl border border-amber-200 bg-amber-50 p-3 text-center text-[13px] text-amber-800">{adError}</div>)}
-                    {/* Carousel header */}
-                    <div className="mb-4 flex items-center justify-center gap-4">
-                      <button type="button" onClick={() => setAdCarouselIndex((i) => Math.max(0, i - 1))} disabled={adCarouselIndex === 0 || ads.length === 0} className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-600 shadow-sm transition hover:bg-gray-50 disabled:opacity-30" aria-label="Previous ad"><svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg></button>
-                      <div className="text-center">
-                        <h3 className="text-lg font-semibold text-gray-900">{adLabel}</h3>
-                        {ads.length > 1 && <p className="text-[12px] text-gray-500">{adCarouselIndex + 1} of {ads.length}</p>}
-                      </div>
-                      <button type="button" onClick={() => setAdCarouselIndex((i) => Math.min(ads.length - 1, i + 1))} disabled={adCarouselIndex >= ads.length - 1 || ads.length === 0} className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-600 shadow-sm transition hover:bg-gray-50 disabled:opacity-30" aria-label="Next ad"><svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg></button>
-                    </div>
-                    {/* Two columns: mockup + strategy */}
-                    <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-center">
-                      <div className="flex flex-shrink-0 flex-col items-center">
-                        {loading && !currentAd ? (
-                          <div className="relative mx-auto w-[290px] rounded-[3rem] border-[6px] border-gray-900 bg-gray-900 p-2 shadow-2xl">
-                            <div className="absolute top-0 left-1/2 z-30 h-6 w-28 -translate-x-1/2 rounded-b-2xl bg-gray-900" />
-                            <div className="relative flex items-center justify-center overflow-hidden rounded-[2.4rem] bg-gray-100" style={{ aspectRatio: "9/19.5" }}>
-                              <div className="flex flex-col items-center gap-3"><div className="h-10 w-10 animate-spin rounded-full border-4 border-brand-200 border-t-brand-600" /><p className="text-[13px] text-gray-500">Generating ads…</p></div>
-                            </div>
-                            <div className="mx-auto mt-2 h-1 w-24 rounded-full bg-gray-600" />
-                          </div>
-                        ) : currentAd ? (
-                          currentAd.type === "instagram-story" ? igStoryMockup(currentAd) : fbMockup(currentAd)
-                        ) : (
-                          <div className="relative mx-auto w-[290px] rounded-[3rem] border-[6px] border-gray-900 bg-gray-900 p-2 shadow-2xl">
-                            <div className="absolute top-0 left-1/2 z-30 h-6 w-28 -translate-x-1/2 rounded-b-2xl bg-gray-900" />
-                            <div className="relative flex items-center justify-center overflow-hidden rounded-[2.4rem] bg-gray-100" style={{ aspectRatio: "9/19.5" }}><p className="text-[13px] text-gray-400">No ad yet</p></div>
-                            <div className="mx-auto mt-2 h-1 w-24 rounded-full bg-gray-600" />
-                          </div>
-                        )}
-                      </div>
-                      {strategyPanel}
-                    </div>
-                  </div>
-                );
-              })()}
-
-              {/* Continue button when video is skipped */}
-              {videoSkipped && (
-                <div className="flex justify-center">
-                  <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center">
-                    <button type="button" onClick={handleContinueToDashboard} disabled={bootstrapLoading || !scanResult} className="rounded-xl bg-brand-600 px-5 py-3 text-[14px] font-semibold text-white shadow-sm transition hover:bg-brand-700 active:scale-[0.98] disabled:opacity-50">{bootstrapLoading ? "Saving…" : "Continue to dashboard"}</button>
-                    {bootstrapError && <p className="mt-3 text-[14px] font-medium text-red-500">{bootstrapError}</p>}
-                  </div>
-                </div>
-              )}
-
-              {!videoSkipped && <div className="flex flex-col items-center justify-center gap-8 lg:flex-row lg:items-start">
-                {/* ── Facebook Reels iPhone Mockup ── */}
-                <div className="flex flex-col items-center gap-3 flex-shrink-0">
-                  <div className="relative mx-auto w-[290px] rounded-[3rem] border-[6px] border-gray-900 bg-gray-900 p-2 shadow-2xl">
+                const videoMockup = (
+                  <div className="relative mx-auto w-[290px] flex-shrink-0 rounded-[3rem] border-[6px] border-gray-900 bg-gray-900 p-2 shadow-2xl">
                     <div className="absolute top-0 left-1/2 z-30 h-6 w-28 -translate-x-1/2 rounded-b-2xl bg-gray-900" />
                     <div className="relative overflow-hidden rounded-[2.4rem] bg-black" style={{ aspectRatio: "9/19.5" }}>
-                      {/* Video layer */}
                       {videoReady ? (
                         <video autoPlay loop muted playsInline src={ugcResult!.video!.url} className="absolute inset-0 h-full w-full object-cover" />
                       ) : videoPending ? (
@@ -1273,10 +1226,7 @@ export default function Home() {
                           <p className="text-center text-[13px] text-white/40">—</p>
                         </div>
                       )}
-
-                      {/* ── Facebook UI overlay ── */}
                       <div className="pointer-events-none absolute inset-0 z-20 flex flex-col justify-between">
-                        {/* Status bar */}
                         <div className="flex items-center justify-between px-5 pt-3 text-[10px] font-semibold text-white">
                           <span>9:41</span>
                           <div className="flex items-center gap-1">
@@ -1284,8 +1234,6 @@ export default function Home() {
                             <svg className="h-3 w-3" fill="white" viewBox="0 0 24 24"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z"/></svg>
                           </div>
                         </div>
-
-                        {/* Top nav: back, Reels label, create, avatar */}
                         <div className="flex items-center justify-between px-4 -mt-1">
                           <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
                           <div className="flex items-center gap-3">
@@ -1296,11 +1244,7 @@ export default function Home() {
                             <div className="h-7 w-7 rounded-full bg-gradient-to-br from-pink-400 to-orange-400 ring-2 ring-white/30" />
                           </div>
                         </div>
-
-                        {/* Spacer */}
                         <div className="flex-1" />
-
-                        {/* Right sidebar: like, comment, share */}
                         <div className="absolute right-3 bottom-32 flex flex-col items-center gap-5">
                           <div className="flex flex-col items-center gap-0.5">
                             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15 backdrop-blur-sm">
@@ -1324,10 +1268,7 @@ export default function Home() {
                             <svg className="h-4 w-4 text-white" fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
                           </div>
                         </div>
-
-                        {/* Bottom info overlay */}
                         <div className="px-3 pb-4">
-                          {/* Profile row */}
                           <div className="mb-1.5 flex items-center gap-2">
                             <div className="h-8 w-8 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 ring-1 ring-white/30 flex items-center justify-center">
                               <span className="text-[10px] font-bold text-white">{(brandName || "A")[0].toUpperCase()}</span>
@@ -1344,7 +1285,6 @@ export default function Home() {
                             <span className="text-[9px] text-white/60">Public</span>
                           </div>
                           <p className="mb-2 text-[11px] text-white drop-shadow leading-tight">{products[0]?.title ? `Trying out ${products[0].title} ✨` : "This is my moment ✨"}</p>
-                          {/* Audio bar */}
                           <div className="flex items-center gap-2 rounded-full bg-white/10 px-2.5 py-1.5 backdrop-blur-sm">
                             <div className="h-5 w-5 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center flex-shrink-0">
                               <span className="text-[7px] font-bold text-white">{(brandName || "A")[0].toUpperCase()}</span>
@@ -1359,39 +1299,49 @@ export default function Home() {
                         </div>
                       </div>
                     </div>
-                    {/* Home indicator */}
                     <div className="mx-auto mt-2 h-1 w-24 rounded-full bg-gray-600" />
                   </div>
-                  <span className="text-[13px] font-semibold text-gray-700">Sora 2 Pro · 12s</span>
-                  {videoReady && (
-                    <a href={ugcResult!.video!.url} download="ugc-testimonial.mp4" className="flex items-center gap-1.5 text-[13px] font-medium text-brand-600 hover:underline">
-                      {downloadIcon} Download
-                    </a>
-                  )}
-                </div>
+                );
 
-                {/* ── Side panel ── */}
-                <div className="w-full max-w-md space-y-4 lg:pt-8">
-                  {ugcResult?.prompt != null && (
-                    <details className="rounded-xl border border-gray-200 bg-white">
-                      <summary className="cursor-pointer px-4 py-3 text-[13px] font-medium text-gray-700">View prompt</summary>
-                      <pre className="max-h-48 overflow-auto border-t border-gray-100 p-4 text-[11px] text-gray-600 whitespace-pre-wrap break-words">
-                        {JSON.stringify(ugcResult.prompt, null, 2)}
-                      </pre>
-                    </details>
-                  )}
+                return (
+                  <div className="mb-10">
+                    {adError && (<div className="mx-auto mb-4 max-w-md rounded-xl border border-amber-200 bg-amber-50 p-3 text-center text-[13px] text-amber-800">{adError}</div>)}
+                    <div className="mb-4 flex items-center justify-center gap-4">
+                      <button type="button" onClick={() => setAdCarouselIndex((i) => Math.max(0, i - 1))} disabled={adCarouselIndex === 0 || totalSlides === 0} className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-600 shadow-sm transition hover:bg-gray-50 disabled:opacity-30" aria-label="Previous"><svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg></button>
+                      <div className="text-center">
+                        <h3 className="text-lg font-semibold text-gray-900">{slideLabel}</h3>
+                        {totalSlides > 1 && <p className="text-[12px] text-gray-500">{adCarouselIndex + 1} of {totalSlides}</p>}
+                      </div>
+                      <button type="button" onClick={() => setAdCarouselIndex((i) => Math.min(totalSlides - 1, i + 1))} disabled={adCarouselIndex >= totalSlides - 1 || totalSlides === 0} className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-600 shadow-sm transition hover:bg-gray-50 disabled:opacity-30" aria-label="Next"><svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg></button>
+                    </div>
+                    <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-center">
+                      <div className="flex flex-shrink-0 flex-col items-center">
+                        {isVideoSlide ? (
+                          videoMockup
+                        ) : loading && !currentAd ? (
+                          <div className="relative mx-auto w-[290px] rounded-[3rem] border-[6px] border-gray-900 bg-gray-900 p-2 shadow-2xl">
+                            <div className="absolute top-0 left-1/2 z-30 h-6 w-28 -translate-x-1/2 rounded-b-2xl bg-gray-900" />
+                            <div className="relative flex items-center justify-center overflow-hidden rounded-[2.4rem] bg-gray-100" style={{ aspectRatio: "9/19.5" }}>
+                              <div className="flex flex-col items-center gap-3"><div className="h-10 w-10 animate-spin rounded-full border-4 border-brand-200 border-t-brand-600" /><p className="text-[13px] text-gray-500">Generating ads…</p></div>
+                            </div>
+                            <div className="mx-auto mt-2 h-1 w-24 rounded-full bg-gray-600" />
+                          </div>
+                        ) : currentAd ? (
+                          currentAd.type === "instagram-story" ? igStoryMockup(currentAd) : fbMockup(currentAd)
+                        ) : (
+                          <div className="relative mx-auto w-[290px] rounded-[3rem] border-[6px] border-gray-900 bg-gray-900 p-2 shadow-2xl">
+                            <div className="absolute top-0 left-1/2 z-30 h-6 w-28 -translate-x-1/2 rounded-b-2xl bg-gray-900" />
+                            <div className="relative flex items-center justify-center overflow-hidden rounded-[2.4rem] bg-gray-100" style={{ aspectRatio: "9/19.5" }}><p className="text-[13px] text-gray-400">No ad yet</p></div>
+                            <div className="mx-auto mt-2 h-1 w-24 rounded-full bg-gray-600" />
+                          </div>
+                        )}
+                      </div>
+                      {!isVideoSlide && strategyPanel}
+                    </div>
+                  </div>
+                );
+              })()}
 
-                  <button
-                    type="button"
-                    onClick={handleContinueToDashboard}
-                    disabled={bootstrapLoading || !scanResult}
-                    className="w-full rounded-xl bg-brand-600 px-5 py-3 text-[14px] font-semibold text-white shadow-sm transition hover:bg-brand-700 active:scale-[0.98] disabled:opacity-50"
-                  >
-                    {bootstrapLoading ? "Saving…" : "Continue to dashboard"}
-                  </button>
-                  {bootstrapError && <p className="text-center text-[14px] font-medium text-red-500">{bootstrapError}</p>}
-                </div>
-              </div>}
             </div>
           </section>
         );
