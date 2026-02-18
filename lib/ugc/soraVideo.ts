@@ -38,8 +38,9 @@ export async function startSoraGeneration(
   };
 
   if (options.imageBuffer) {
+    const blobPart = new Uint8Array(options.imageBuffer);
     const file = new File(
-      [options.imageBuffer],
+      [blobPart],
       options.imageName ?? "product.jpg",
       { type: "image/jpeg" }
     );
