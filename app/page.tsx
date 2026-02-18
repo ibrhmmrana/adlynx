@@ -312,11 +312,13 @@ export default function Home() {
   const [generatedAds, setGeneratedAds] = useState<{ ads: GeneratedAd[]; loading?: boolean; error?: string } | null>(null);
   const [adsetStrategy, setAdsetStrategy] = useState<{ strategy: AdsetStrategy | null; loading: boolean; error?: string } | null>(null);
   const [adCarouselIndex, setAdCarouselIndex] = useState(0);
+  const [videoMuted, setVideoMuted] = useState(true);
 
   const pathname = usePathname();
   const hasRestoredRef = useRef(false);
   const ugcTriggeredRef = useRef(false);
   const adsTriggeredRef = useRef(false);
+  const ugcVideoRef = useRef<HTMLVideoElement>(null);
 
   /* Restore wizard state from sessionStorage on mount (only on /) */
   useEffect(() => {
@@ -1215,7 +1217,7 @@ export default function Home() {
                     <div className="absolute top-0 left-1/2 z-30 h-6 w-28 -translate-x-1/2 rounded-b-2xl bg-gray-900" />
                     <div className="relative overflow-hidden rounded-[2.4rem] bg-black" style={{ aspectRatio: "9/19.5" }}>
                       {videoReady ? (
-                        <video autoPlay loop muted playsInline src={ugcResult!.video!.url} className="absolute inset-0 h-full w-full object-cover" />
+                        <video ref={ugcVideoRef} autoPlay loop muted={videoMuted} playsInline src={ugcResult!.video!.url} className="absolute inset-0 h-full w-full object-cover" />
                       ) : videoPending ? (
                         <div className="flex h-full flex-col items-center justify-center gap-4 p-6">
                           <div className="h-10 w-10 animate-spin rounded-full border-4 border-white/20 border-t-white" />
@@ -1298,6 +1300,20 @@ export default function Home() {
                           </div>
                         </div>
                       </div>
+                      {videoReady && (
+                        <button
+                          type="button"
+                          onClick={() => setVideoMuted((m) => !m)}
+                          className="absolute top-3 right-3 z-30 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 backdrop-blur-sm text-white hover:bg-black/70 transition"
+                          aria-label={videoMuted ? "Unmute" : "Mute"}
+                        >
+                          {videoMuted ? (
+                            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 8.003 12 8.449 12 9.414v5.172c0 .965-1.077 1.411-1.707.707L5.586 15z" /><path strokeLinecap="round" strokeLinejoin="round" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
+                          ) : (
+                            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 8.003 12 8.449 12 9.414v5.172c0 .965-1.077 1.411-1.707.707L5.586 15z" /></svg>
+                          )}
+                        </button>
+                      )}
                     </div>
                     <div className="mx-auto mt-2 h-1 w-24 rounded-full bg-gray-600" />
                   </div>
@@ -1315,9 +1331,17 @@ export default function Home() {
                       <button type="button" onClick={() => setAdCarouselIndex((i) => Math.min(totalSlides - 1, i + 1))} disabled={adCarouselIndex >= totalSlides - 1 || totalSlides === 0} className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-600 shadow-sm transition hover:bg-gray-50 disabled:opacity-30" aria-label="Next"><svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg></button>
                     </div>
                     <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-center">
-                      <div className="flex flex-shrink-0 flex-col items-center">
+                      <div className="flex flex-shrink-0 flex-col items-center gap-3">
                         {isVideoSlide ? (
-                          videoMockup
+                          <>
+                            {videoMockup}
+                            {videoReady && (
+                              <a href={ugcResult!.video!.url} download="ugc-testimonial.mp4" className="flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-[13px] font-medium text-gray-700 shadow-sm transition hover:bg-gray-50">
+                                {downloadIcon}
+                                Download video
+                              </a>
+                            )}
+                          </>
                         ) : loading && !currentAd ? (
                           <div className="relative mx-auto w-[290px] rounded-[3rem] border-[6px] border-gray-900 bg-gray-900 p-2 shadow-2xl">
                             <div className="absolute top-0 left-1/2 z-30 h-6 w-28 -translate-x-1/2 rounded-b-2xl bg-gray-900" />
