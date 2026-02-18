@@ -16,6 +16,7 @@ type BootstrapBody = {
     colors: { primary?: string; secondary?: string; accent?: string } | null;
     socialLinks: unknown;
     logoUrl: string | null;
+    logoStoragePath: string | null;
   };
   products: Array<{
     externalId?: string | null;
@@ -56,7 +57,7 @@ export async function POST(request: Request) {
     colors: profile?.colors ?? null,
     social_links: profile?.socialLinks ?? null,
     logo_external_url: profile?.logoUrl?.trim() ?? null,
-    logo_storage_path: null,
+    logo_storage_path: profile?.logoStoragePath?.trim() ?? null,
   };
 
   const { data: workspace, error: wsError } = await supabase

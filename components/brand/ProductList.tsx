@@ -335,7 +335,7 @@ export function ProductListPanel({
   }
 
   return (
-    <div className="flex gap-6 min-h-[500px]">
+    <div className="flex min-h-[500px] w-full min-w-0 gap-6">
       {/* Sidebar: scrollable product list */}
       <div className="flex max-h-[calc(100vh-10rem)] w-64 shrink-0 flex-col">
         <button
@@ -370,8 +370,8 @@ export function ProductListPanel({
         )}
       </div>
 
-      {/* Right panel */}
-      <div className="flex-1 rounded-2xl border border-gray-200 bg-white p-6">
+      {/* Right panel: min-w-0 so it shrinks and horizontal scroll stays inside images block */}
+      <div className="min-w-0 flex-1 rounded-2xl border border-gray-200 bg-white p-6">
         {showAdd ? (
           <AddProductPanel
             onImportUrl={handleImportUrl}

@@ -58,6 +58,24 @@
   animation-delay: -14s;
 }
 
+/* Scan loader animations */
+@keyframes scan-sweep-rotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+.scan-sweep {
+  animation: scan-sweep-rotate 3s linear infinite;
+  opacity: 0.6;
+}
+
+@keyframes scan-phase-in {
+  0% { opacity: 0; transform: translateY(8px) scale(0.97); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+.scan-phase-text {
+  animation: scan-phase-in 0.35s ease-out;
+}
+
 /* Minimal scrollbar for product thumbs (horizontal scroll container) */
 .product-thumbs-scroll {
   scrollbar-width: thin;
